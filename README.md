@@ -3,8 +3,8 @@
 A minimal Compose Multiplatform (Kotlin/Wasm) project that reproduces a rendering bug in Safari 27.2
 (iOS 27.2 and macOS 27.2). The whole app is one `LazyColumn` of cards: [`src/wasmJsMain/kotlin/main.kt`](src/wasmJsMain/kotlin/main.kt).
 
-**Live:** https://marcinmoskala.github.io/compose-safari-drag-repro/ (no workaround)
-and https://marcinmoskala.github.io/compose-safari-drag-repro/fixed/ (the same code built with the workaround below).
+**Live:** https://marcinmoskala.com/compose-safari-drag-repro/ (no workaround)
+and https://marcinmoskala.com/compose-safari-drag-repro/fixed/ (the same code built with the workaround below).
 
 | Without workaround | With workaround |
 | --- | --- |
@@ -29,7 +29,7 @@ wrong, and it stays that way until something triggers the next frame (e.g. the n
 
 **Automatic, also with a mouse in desktop Safari**
 1. Open the page and press **Simulate slow touch drag** (bottom right), or open it with `?auto`
-   (e.g. `https://marcinmoskala.github.io/compose-safari-drag-repro/?auto`), which presses it 3 s after the canvas appears.
+   (e.g. `https://marcinmoskala.com/compose-safari-drag-repro/?auto`), which presses it 3 s after the canvas appears.
 2. The button dispatches synthetic touch pointer events on the Compose canvas: `pointerdown` (pointerType `touch`) at
    y = 388, `pointermove` to y = 358, 288, 218, 138 (one every 150 ms), then `pointerup`.
 3. **Actual (Safari 27.2):** after the 4th move the cards are piled at the top-left corner.
@@ -37,7 +37,9 @@ wrong, and it stays that way until something triggers the next frame (e.g. the n
    are for this project; desktop Safari 27.2 was verified with the larger app this repro was cut down from.)
 
 Load the page fresh for each attempt. On the iOS 27.2 simulator (iPhone 17) the build without the workaround showed
-the broken frame in 8 of 8 fresh loads (6 with `?auto`, 2 with a finger); the build with the workaround in 0 of 6.
+the broken frame in 11 of 11 fresh loads (9 with `?auto`, 3 of them on the live page, and 2 with a finger); the
+build with the workaround in 0 of 8. A build of skiko's glue generated as in the proposed fix (see below), with no
+webpack rewrite, in 0 of 3.
 The label at the bottom right says which build is loaded.
 
 ## Versions
@@ -65,7 +67,7 @@ export let f = (...a) => { try { return loadedWasm._["f"](...a) } finally {} }
 ```
 
 Forwarders without `try` (`(...a) => loadedWasm._["f"](...a)`, `function () { return f.apply(null, arguments) }`)
-still fail.
+still fail. Terser (webpack's production minifier) keeps the empty `finally {}`.
 
 ## Building
 
