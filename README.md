@@ -6,9 +6,16 @@ A minimal Compose Multiplatform (Kotlin/Wasm) project that reproduces a renderin
 **Live:** https://marcinmoskala.com/compose-safari-drag-repro/ (no workaround)
 and https://marcinmoskala.com/compose-safari-drag-repro/fixed/ (the same code built with the workaround below).
 
-| Without workaround | With workaround |
-| --- | --- |
-| [docs/ios-safari-27-bug.mp4](docs/ios-safari-27-bug.mp4) | [docs/ios-safari-27-with-workaround.mp4](docs/ios-safari-27-with-workaround.mp4) |
+Side by side, iOS 27.2 simulator (the drag is shown at 1/4 speed, the end frame is held):
+
+[docs/safari-27-bug-side-by-side.mp4](docs/safari-27-bug-side-by-side.mp4)
+
+![Without workaround (left): cards piled at the top-left, rest empty. With workaround (right): the list scrolled](docs/safari-27-bug-side-by-side.png)
+
+The cards have distinct colours (six strong colours in turn) and a large number (`#0`, `#1`, ...), so the broken frame is
+easy to read. The yellow ring is a small page overlay that marks where the touch pointer is (see `index.html`); it has
+`pointer-events: none` and does not change the bug. Earlier recordings with a real finger:
+[without](docs/ios-safari-27-bug.mp4), [with workaround](docs/ios-safari-27-with-workaround.mp4).
 
 ## What happens
 
@@ -40,6 +47,7 @@ Load the page fresh for each attempt. On the iOS 27.2 simulator (iPhone 17) the 
 the broken frame in 11 of 11 fresh loads (9 with `?auto`, 3 of them on the live page, and 2 with a finger); the
 build with the workaround in 0 of 8. A build of skiko's glue generated as in the proposed fix (see below), with no
 webpack rewrite, in 0 of 3.
+With the distinct card colours the no-workaround build showed the broken frame in 3 of 3 fresh `?auto` loads and the build with the workaround in 0 of 3. (A finger gesture injected through the simulator tool did not trigger it in 3 of 3 attempts with this version; `?auto` and the earlier finger recordings did.)
 The label at the bottom right says which build is loaded.
 
 ## Versions
