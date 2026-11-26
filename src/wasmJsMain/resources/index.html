@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Compose Safari drag repro</title>
+    <style>
+        html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #F4EFEA; overscroll-behavior: none; }
+        #app { position: fixed; inset: 0; }
+        #panel { position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 10; font: 13px -apple-system, sans-serif; display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+        #panel button { font: inherit; padding: 8px 12px; }
+        #panel span { background: #000; color: #fff; padding: 4px 8px; }
+    </style>
+    <script>
+        // Unrelated to this bug, but needed to see anything in Safari: a Kotlin/Wasm closure handed straight to
+        // requestAnimationFrame never presents its frame there (the page stays white). Wrapped in a plain function, it does.
+        (function () {
+            var request = window.requestAnimationFrame;
+            window.requestAnimationFrame = function (callback) {
+                return request.call(window, function (time) { return callback(time); });
+            };
+        })();
+    </script>
+</head>
+<body>
+<div id="app"></div>
+<div id="panel"><span id="build"></span><span id="status">drag the list slowly, or press the button</span><button id="run">Simulate slow touch drag</button></div>
+<script>
+    // Which build this is: with the workaround, skiko's forwarders contain `finally{}` (see webpack.config.d).
+    fetch('repro.js').then(function (r) { return r.text(); }).then(function (code) {
+        document.getElementById('build').textContent = code.indexOf('finally{}') >= 0 ? 'build: WITH workaround' : 'build: no workaround';
+    });
+
+    function canvas() {
+        var found = null;
+        document.querySelectorAll('#app *').forEach(function (n) { if (n.shadowRoot && !found) found = n.shadowRoot.querySelector('canvas'); });
+        return found;
+    }
+
+    // Plays the gesture that triggers the bug: a touch pointer pressed on the list, then four large, slow moves
+    // (70 CSS px every 150 ms), then released. Real fingers that rest on the screen for a moment and then drag
+    // do the same. Synthetic events are used so that the bug can be reproduced with a mouse in desktop Safari.
+    function simulateDrag() {
+        var target = canvas();
+        if (!target) return;
+        var x = target.getBoundingClientRect().width / 2;
+        function send(type, y) {
+            target.dispatchEvent(new PointerEvent(type, {
+                pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: x, clientY: y,
+                buttons: type === 'pointerup' ? 0 : 1, bubbles: true, cancelable: true, composed: true
+            }));
+        }
+        var status = document.getElementById('status');
+        status.textContent = 'dragging…';
+        send('pointerdown', 388);
+        var ys = [358, 288, 218, 138], i = 0;
+        var timer = setInterval(function () {
+            if (i < ys.length) { send('pointermove', ys[i++]); return; }
+            clearInterval(timer);
+            send('pointerup', ys[ys.length - 1]);
+            status.textContent = 'done: expected the list scrolled by ~250 px';
+        }, 150);
+    }
+    document.getElementById('run').addEventListener('click', simulateDrag);
+
+    // ?auto presses the button 3 s after the canvas has appeared.
+    if (location.search.indexOf('auto') >= 0) {
+        var wait = setInterval(function () {
+            if (!canvas()) return;
+            clearInterval(wait);
+            setTimeout(simulateDrag, 3000);
+        }, 100);
+    }
+</script>
+<script src="repro.js"></script>
+</body>
+</html>
